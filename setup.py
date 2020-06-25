@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-from django_mailbox import __version__ as version_string
+from django_mailbox_abstract import __version__ as version_string
 
 
 tests_require = [
@@ -14,16 +14,17 @@ gmail_oauth2_require = [
 ]
 
 setup(
-    name='django-mailbox',
+    name='django-mailbox-abstract',
     version=version_string,
-    url='http://github.com/coddingtonbear/django-mailbox/',
+    url='https://github.com/elluscinia/django-mailbox/',
     description=(
         'Import mail from POP3, IMAP, local mailboxes or directly from '
-        'Postfix or Exim4 into your Django application automatically.'
+        'Postfix or Exim4 into your Django application automatically. '
+        'Now with abstract models to override default some fields.'
     ),
     license='MIT',
-    author='Adam Coddington',
-    author_email='me@adamcoddington.net',
+    author='Elena Solovyeva',
+    author_email='el.luscinia@yandex.ru',
     extras_require={
         'gmail-oauth2': gmail_oauth2_require
     },
