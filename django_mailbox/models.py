@@ -15,7 +15,6 @@ import email
 import logging
 import mimetypes
 import os.path
-import sys
 import uuid
 from tempfile import NamedTemporaryFile
 
@@ -44,6 +43,10 @@ class ActiveMailboxManager(models.Manager):
 
 
 class Mailbox(models.Model):
+    # need to override to use at model`s methods
+    message_model = None
+    message_attachment_model = None
+
     name = models.CharField(
         _('Name'),
         max_length=255,
@@ -285,7 +288,7 @@ class Mailbox(models.Model):
             if not extension:
                 extension = '.bin'
 
-            attachment = MessageAttachment()
+            attachment = self.message_attachment_model(message=record)
 
             attachment.document.save(
                 uuid.uuid4().hex + extension,
@@ -340,12 +343,10 @@ class Mailbox(models.Model):
         return new
 
     def _process_message(self, message):
-        msg = Message()
+        msg = self.message_model()
         msg._email_object = message
         settings = utils.get_settings()
 
-        if settings['store_original_message']:
-            self._process_save_original_message(message, msg)
         msg.mailbox = self
         if 'subject' in message:
             msg.subject = (
@@ -362,6 +363,10 @@ class Mailbox(models.Model):
                 message['Delivered-To']
             )
         msg.save()
+
+        if settings['store_original_message']:
+            self._process_save_original_message(message, msg)
+
         message = self._get_dehydrated_message(message, msg)
         try:
             body = message.as_string()
@@ -373,7 +378,7 @@ class Mailbox(models.Model):
         msg.set_body(body)
         if message['in-reply-to']:
             try:
-                msg.in_reply_to = Message.objects.filter(
+                msg.in_reply_to = self.message_model.objects.filter(
                     message_id=message['in-reply-to'].strip()
                 )[0]
             except IndexError:
@@ -422,6 +427,7 @@ class Mailbox(models.Model):
     class Meta:
         verbose_name = _('Mailbox')
         verbose_name_plural = _('Mailboxes')
+        abstract = True
 
 
 class IncomingMessageManager(models.Manager):
@@ -732,6 +738,7 @@ class Message(models.Model):
     class Meta:
         verbose_name = _('E-mail message')
         verbose_name_plural = _('E-mail messages')
+        abstract = True
 
 
 class MessageAttachment(models.Model):
@@ -805,3 +812,4 @@ class MessageAttachment(models.Model):
     class Meta:
         verbose_name = _('Message attachment')
         verbose_name_plural = _('Message attachments')
+        abstract = True

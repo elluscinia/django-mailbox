@@ -8,7 +8,7 @@ except ImportError:
 
 from django.core.management.base import BaseCommand
 
-from django_mailbox.models import Mailbox
+from django.apps import apps
 
 
 logger = logging.getLogger(__name__)
@@ -25,12 +25,17 @@ class Command(BaseCommand):
             nargs='?',
             help="The name of the mailbox that will receive the message"
         )
+        parser.add_argument(
+            'mailbox_model_name',
+            help="The name of the inherited model of mailbox that will receive the message"
+        )
 
-    def handle(self, mailbox_name=None, *args, **options):
+    def handle(self, mailbox_name, mailbox_model_name=None, *args, **options):
+        mailbox_model = apps.get_model(mailbox_model_name)
         message = email.message_from_string(sys.stdin.read())
         if message:
             if mailbox_name:
-                mailbox = self.get_mailbox_by_name(mailbox_name)
+                mailbox = self.get_mailbox_by_name(mailbox_name, mailbox_model)
             else:
                 mailbox = self.get_mailbox_for_message(message)
             mailbox.process_incoming_message(message)
@@ -41,8 +46,8 @@ class Command(BaseCommand):
         else:
             logger.warning("Message not processable.")
 
-    def get_mailbox_by_name(self, name):
-        mailbox, created = Mailbox.objects.get_or_create(
+    def get_mailbox_by_name(self, name, mailbox_model_name):
+        mailbox, created = mailbox_model_name.objects.get_or_create(
             name=name,
         )
         return mailbox

@@ -3,8 +3,7 @@ import hashlib
 import logging
 
 from django.core.management.base import BaseCommand
-
-from django_mailbox.models import MessageAttachment, Message
+from django.apps import apps
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -22,10 +21,23 @@ class Command(BaseCommand):
     have been quite unlucky to have ran the bad migration).
 
     """
-    def handle(self, *args, **options):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'message_model_name',
+            help="The name of the inherited model of message"
+        )
+        parser.add_argument(
+            'message_attachment_model_name',
+            help="The name of the inherited model of message`s attachment"
+        )
+
+    def handle(self, message_model_name, message_attachment_model_name, *args, **options):
+        message_model = apps.get_model(message_model_name)
+        message_attachment_model = apps.get_model(message_attachment_model_name)
+
         attachment_hash_map = {}
 
-        attachments_without_messages = MessageAttachment.objects.filter(
+        attachments_without_messages = message_attachment_model.objects.filter(
             message=None
         ).order_by(
             'id'
@@ -40,7 +52,7 @@ class Command(BaseCommand):
                 md5.update(chunk)
             attachment_hash_map[md5.hexdigest()] = attachment.pk
 
-        for message_record in Message.objects.all().order_by('id'):
+        for message_record in message_model.objects.all().order_by('id'):
             message = email.message_from_string(message_record.body)
             if message.is_multipart():
                 for part in message.walk():
@@ -52,7 +64,7 @@ class Command(BaseCommand):
                     md5.update(part.get_payload(decode=True))
                     digest = md5.hexdigest()
                     if digest in attachment_hash_map:
-                        attachment = MessageAttachment.objects.get(
+                        attachment = message_attachment_model.objects.get(
                             pk=attachment_hash_map[digest]
                         )
                         attachment.message = message_record
