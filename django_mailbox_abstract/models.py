@@ -272,10 +272,10 @@ class Mailbox(models.Model):
             )
             new.set_payload('')
         elif (
-            (
-                msg.get_content_type() not in settings['text_stored_mimetypes']
-            ) or
-            ('attachment' in msg.get('Content-Disposition', ''))
+                (
+                    (msg.get_content_type() not in settings['text_stored_mimetypes']) or
+                    ('attachment' in msg.get('Content-Disposition', ''))
+                ) and settings['check_attachment'](msg)
         ):
             filename = None
             raw_filename = msg.get_filename()
@@ -285,11 +285,8 @@ class Mailbox(models.Model):
                 extension = mimetypes.guess_extension(msg.get_content_type())
             else:
                 _, extension = os.path.splitext(filename)
-            if not extension:
-                extension = '.bin'
 
             attachment = self.message_attachment_model(message=record)
-
             attachment.document.save(
                 uuid.uuid4().hex + extension,
                 ContentFile(
@@ -298,7 +295,7 @@ class Mailbox(models.Model):
                     ).getvalue()
                 )
             )
-            attachment.message = record
+
             for key, value in msg.items():
                 attachment[key] = value
             attachment.save()

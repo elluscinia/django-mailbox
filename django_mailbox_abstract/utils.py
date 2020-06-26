@@ -66,6 +66,11 @@ def get_settings():
             settings,
             'DJANGO_MAILBOX_default_charset',
             'iso8859-1',
+        ),
+        'check_attachment': getattr(
+            settings,
+            'DJANGO_MAILBOX_ATTACH_ATTACHMENT',
+            lambda msg: True
         )
     }
 
